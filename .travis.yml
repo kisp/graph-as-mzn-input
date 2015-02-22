@@ -28,7 +28,14 @@ install:
   #- git clone --depth=1 git://github.com/trivial-features/trivial-features.git ~/lisp/trivial-features
   #- git clone git://common-lisp.net/projects/alexandria/alexandria.git ~/lisp/alexandria
   #- git clone --depth=1 git://github.com/cl-babel/babel.git ~/lisp/babel
-
+  - echo the PATH is:
+  - echo $PATH
+  - mkdir ttt
+  - curl -L http://www.minizinc.org/downloads/release-2.0.1/minizinc-2.0.1-linux64.tar.gz >ttt/minizinc-2.0.1-linux64.tar.gz
+  - cd ttt; tar xfz minizinc-2.0.1-linux64.tar.gz
+  - echo we are now in `pwd`
+  - ls -al
+  
 script:
   - cl -e '(ql:quickload "graph-as-mzn-input-test")
            (uiop:quit (if (myam:load-and-run! "graph-as-mzn-input-test") 0 1))'
