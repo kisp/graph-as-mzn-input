@@ -15,6 +15,15 @@
                     (parse-line line)
                   (assert (equal "----------" (read-line stream))))))
 
+#+sbcl(defvar *counter* 0)
+#+sbcl(defvar *counter-lock* (sb-thread:make-mutex :name "counter-lock"))
+
+#+sbcl
+(defun fresh-count ()
+  (sb-thread:with-mutex (*counter-lock*)
+    (incf *counter*)))
+
+#-sbcl
 (defun tmp-pathname (base-name)
   (parse-namestring
    (format nil "/tmp/~A-~D-~D" base-name
@@ -23,8 +32,21 @@
            #-(or clisp sbcl) (error "do not know how to getpid")
            (random 1000000))))
 
-(defmacro with-tmp-file ((var base-name) &body body)
-  `(let ((,var (tmp-pathname ,base-name)))
+#+sbcl
+(defun tmp-pathname (base-name)
+  (parse-namestring
+   (format nil "/tmp/~A-~D-~D-~D" base-name
+           #+clisp(posix:process-id)
+           #+sbcl (sb-posix:getpid)
+           #-(or clisp sbcl) (error "do not know how to getpid")
+           (random 1000000)
+           (fresh-count))))
+
+(defmacro with-tmp-file ((var base-name &key type) &body body)
+  (check-type var symbol)
+  `(let ((,var ,(if type
+                    `(make-pathname :type ,type :defaults (tmp-pathname ,base-name))
+                    `(tmp-pathname ,base-name))))
      (unwind-protect
           (progn ,@body)
        (when (probe-file ,var)
@@ -62,29 +84,28 @@ output [show(arguments[a]) ++ \" \" | a in argumentsRange];
 
 (defun solve-all (graph &key constraints)
   (let ((nodes (graph:nodes graph)))
-    (with-tmp-file (tmp-file "graph-mzn")
-      (let ((tmp-file (make-pathname :type "mzn" :defaults tmp-file)))
-        (with-tmp-file (tmp-file2 "graph-mzn")
-          (with-tmp-file (tmp-file3 "graph-mzn-error")
-            (with-open-file (output tmp-file :direction :output)
-              (format-graph graph output nodes)
-              (format-header output)
-              (dolist (constraint constraints)
-                (format output "~A~%" constraint))
-              (format-footer output))
-            (let ((process
-                    (sb-ext:run-program "mzn-g12fd" (list "-a" (namestring tmp-file))
-                                        :search t
-                                        :output (namestring tmp-file2)
-                                        :error (namestring tmp-file3))))
-              (unless (zerop (sb-ext:process-exit-code process))
-                (error "mzn-g12fd failed:~%~A" (read-file-into-string tmp-file3)))
-              (let ((result
-                      (with-open-file (input tmp-file2)
-                        (parse-output input))))
-                (mapcar (lambda (s)
-                          (loop for x in s
-                                for i upfrom 0
-                                when x
-                                  collect (nth i nodes)))
-                        result)))))))))
+    (with-tmp-file (tmp-file "graph-mzn-input" :type "mzn")
+      (with-tmp-file (tmp-file2 "graph-mzn-output")
+        (with-tmp-file (tmp-file3 "graph-mzn-error")
+          (with-open-file (output tmp-file :direction :output)
+            (format-graph graph output nodes)
+            (format-header output)
+            (dolist (constraint constraints)
+              (format output "~A~%" constraint))
+            (format-footer output))
+          (let ((process
+                  (sb-ext:run-program "mzn-g12fd" (list "-a" (namestring tmp-file))
+                                      :search t
+                                      :output (namestring tmp-file2)
+                                      :error (namestring tmp-file3))))
+            (unless (zerop (sb-ext:process-exit-code process))
+              (error "mzn-g12fd failed:~%~A" (read-file-into-string tmp-file3)))
+            (let ((result
+                    (with-open-file (input tmp-file2)
+                      (parse-output input))))
+              (mapcar (lambda (s)
+                        (loop for x in s
+                              for i upfrom 0
+                              when x
+                                collect (nth i nodes)))
+                      result))))))))
