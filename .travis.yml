@@ -35,6 +35,10 @@ install:
   - cd ttt; tar xfz minizinc-2.0.1-linux64.tar.gz
   - echo we are now in `pwd`
   - ls -al
+  - cd minizinc-2.0.1
+  - ls -al
+  - cd bin
+  - export PATH=`pwd`:$PATH
   
 script:
   - cl -e '(ql:quickload "graph-as-mzn-input-test")
