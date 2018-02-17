@@ -29,10 +29,10 @@ install:
   #- git clone git://common-lisp.net/projects/alexandria/alexandria.git ~/lisp/alexandria
   #- git clone --depth=1 git://github.com/cl-babel/babel.git ~/lisp/babel
   - mkdir mzn
-  - curl -L http://www.minizinc.org/downloads/release-2.0.1/minizinc-2.0.1-linux64.tar.gz >mzn/minizinc-2.0.1-linux64.tar.gz
+  - curl -L https://github.com/MiniZinc/libminizinc/releases/download/2.1.6/minizinc-2.1.6-linux64.tar.gz >mzn/minizinc.tar.gz
   - cd mzn
-  - tar xfz minizinc-2.0.1-linux64.tar.gz
-  - cd minizinc-2.0.1
+  - tar xfz minizinc.tar.gz
+  - cd minizinc-2.1.6
   - ls -al
   - cd bin
   - export PATH=`pwd`:$PATH
